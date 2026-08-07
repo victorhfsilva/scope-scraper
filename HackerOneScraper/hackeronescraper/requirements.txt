@@ -1,0 +1,7 @@
+python-dotenv==1.2.1
+Scrapy==2.14.1
+scrapy-rotating-proxies==0.6.2
+scrapyd==1.6.0
+scrapyd-client==2.0.3
+scrapydweb==1.6.0
+logparser==0.8.4
