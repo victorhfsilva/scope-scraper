@@ -24,7 +24,7 @@ services:
       - ./data:/output
     ports:
       # Scrapyd exposto apenas no loopback do host.
-      - "127.0.0.1:6800:6800"
+      - "127.0.0.1:${SCRAPYD_HOST_PORT:-6800}:6800"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:6800/daemonstatus.json"]
       interval: 30s
