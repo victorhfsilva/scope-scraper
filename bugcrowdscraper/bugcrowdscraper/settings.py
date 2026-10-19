@@ -1,4 +1,5 @@
 import datetime as dt
+import os
 
 # Scrapy settings for bugcrowdscraper project
 #
@@ -51,12 +52,16 @@ CONCURRENT_REQUESTS = 8
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-   "bugcrowdscraper.middlewares.RotateUserAgentMiddleware": 543,
-    'rotating_proxies.middlewares.RotatingProxyMiddleware': 610,
-    'rotating_proxies.middlewares.BanDetectionMiddleware': 620,
+    "bugcrowdscraper.middlewares.RotateUserAgentMiddleware": 543,
 }
 
-ROTATING_PROXY_LIST_PATH = 'proxies.txt'
+_PROXY_FILE = os.environ.get("BUGCROWD_PROXY_LIST", "/opt/BugcrowdScraper/proxies.txt")
+ROTATING_PROXY_LIST_PATH = _PROXY_FILE
+if os.path.isfile(_PROXY_FILE) and os.path.getsize(_PROXY_FILE) > 0:
+    DOWNLOADER_MIDDLEWARES.update({
+        "rotating_proxies.middlewares.RotatingProxyMiddleware": 610,
+        "rotating_proxies.middlewares.BanDetectionMiddleware": 620,
+    })
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -108,8 +113,11 @@ LOG_STDOUT = False
 LOG_FORMAT = "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
 LOG_DATEFORMAT = "%Y-%m-%d %H:%M:%S"
 
+OUTPUT_DIR = os.environ.get("BUGCROWD_OUTPUT_DIR", "/output/bugcrowd")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 FEEDS = {
-    f"output/{dt.datetime.now().strftime('%Y-%m-%d')}-scopes.csv": {
+    f"{OUTPUT_DIR}/{dt.datetime.now().strftime('%Y-%m-%d')}-scopes.csv": {
         "format": "csv",
         "encoding": "utf8",
         "store_empty": False,

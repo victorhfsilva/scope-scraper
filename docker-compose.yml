@@ -1,0 +1,33 @@
+services:
+  bbscraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bugbounty-scraper:latest
+    container_name: bugbounty-scraper
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SCRAPYD_URL: http://127.0.0.1:6800
+      SCRAPYD_BIND_ADDRESS: 0.0.0.0
+      BUGCROWD_OUTPUT_DIR: /output/bugcrowd
+      HACKERONE_OUTPUT_DIR: /output/hackerone
+      H1_DELAY_HOURS: ${H1_DELAY_HOURS:-3}
+      JOB_TIMEOUT_SECONDS: ${JOB_TIMEOUT_SECONDS:-21600}
+      PIPELINE_CRON: ${PIPELINE_CRON:-0 2 * * *}
+      TZ: ${TZ:-America/Sao_Paulo}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+    volumes:
+      # Tudo em ./data fica acessivel no host, inclusive os dominios com wildcard.
+      - ./data:/output
+    ports:
+      # Scrapyd exposto apenas no loopback do host.
+      - "127.0.0.1:6800:6800"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:6800/daemonstatus.json"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
