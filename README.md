@@ -256,6 +256,20 @@ Também é gerada a versão sem `*.`:
 ./data/scopes/all_scope_domains.txt
 ```
 
+### Domínios novos (diff)
+
+A cada execução o pipeline compara o escopo consolidado atual com o da execução
+anterior e grava apenas os domínios/wildcards que **não** estavam no escopo
+antigo:
+
+```text
+./data/scopes/all_scope_domains_new.txt     # exemplo.com (sem wildcard)
+./data/scopes/all_scope_wildcards_new.txt   # *.example.com
+```
+
+Se não houver arquivo anterior (primeira execução), todos os domínios são
+considerados novos.
+
 ### CSVs brutos
 
 ```text

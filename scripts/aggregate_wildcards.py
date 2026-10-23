@@ -3,9 +3,12 @@
 
   - all_scope_wildcards.txt  -> *.example.com (um por linha)
   - all_scope_domains.txt    -> example.com    (lista sem wildcard)
+  - all_scope_wildcards_new.txt -> wildcards novos (nao presentes no arquivo anterior)
+  - all_scope_domains_new.txt   -> dominios novos  (nao presentes no arquivo anterior)
 
-O arquivo e gravado dentro de /output, que no docker-compose e o bind mount
-./data do host.
+Os arquivos sao gravados dentro de /output, que no docker-compose e o bind
+mount ./data do host. A cada execucao, os arquivos *_new.txt sao recalculados
+comparando o escopo atual com o arquivo consolidado da execucao anterior.
 """
 from __future__ import annotations
 
@@ -103,6 +106,24 @@ def write_lines(path: Path, values: set[str]) -> None:
     tmp.replace(path)
 
 
+def new_path(path: Path) -> Path:
+    """Deriva o caminho do arquivo de 'novos', inserindo '_new' antes da extensao."""
+    return path.with_name(f"{path.stem}_new{path.suffix}")
+
+
+def read_previous_domains(*paths: Path) -> set[str]:
+    """Le os dominios normalizados dos arquivos consolidados da execucao anterior."""
+    domains: set[str] = set()
+    for path in paths:
+        if not path.exists():
+            continue
+        for line in iter_lines([path]):
+            domain = normalize(line)
+            if domain:
+                domains.add(domain)
+    return domains
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bugcrowd", default="/output/processed")
@@ -126,12 +147,28 @@ def main() -> int:
     domains = bugcrowd | hackerone
     wildcards = {f"*.{domain}" for domain in domains}
 
-    write_lines(Path(args.output), wildcards)
-    write_lines(Path(args.plain_output), domains)
+    output = Path(args.output)
+    plain_output = Path(args.plain_output)
+
+    previous = read_previous_domains(output, plain_output)
+    new_domains = domains - previous
+
+    write_lines(output, wildcards)
+    write_lines(plain_output, domains)
+
+    new_wildcard_path = new_path(output)
+    new_domain_path = new_path(plain_output)
+    write_lines(new_wildcard_path, {f"*.{domain}" for domain in new_domains})
+    write_lines(new_domain_path, new_domains)
 
     print(
         f"[aggregate] Bugcrowd={len(bugcrowd)} HackerOne={len(hackerone)} "
         f"combinados={len(domains)} -> {args.output}",
+        file=sys.stderr,
+    )
+    print(
+        f"[aggregate] novos={len(new_domains)} "
+        f"(wildcards -> {new_wildcard_path}, dominios -> {new_domain_path})",
         file=sys.stderr,
     )
     return 0
