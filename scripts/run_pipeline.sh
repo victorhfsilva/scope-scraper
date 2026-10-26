@@ -179,4 +179,10 @@ SUMMARY="Pipeline finalizado: Bugcrowd=${BC_STATUS} | HackerOne=${H1_STATUS} | w
 log "$SUMMARY"
 notify_msg "$SUMMARY"
 
+# Garante que os arquivos gerados pertençam ao usuário do host (bind mount ./data),
+# mesmo quando o pipeline roda como root dentro do container.
+if [ -n "${PUID:-}" ] && [ -n "${PGID:-}" ]; then
+    chown -R "${PUID}:${PGID}" /output 2>/dev/null || true
+fi
+
 log "===== fim do pipeline ====="

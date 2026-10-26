@@ -16,6 +16,9 @@
 #   --new-limit N      máx. de itens novos exibidos por categoria (padrão: 10)
 #   --removed-limit N  máx. de itens removidos exibidos por categoria (padrão: 5)
 #   --no-digest        não envia o resumo final via notify
+#   --send-delay N     pausa, em segundos, entre cada notificação enviada ao
+#                      Discord (padrão: 1). Evita o erro 429 Too Many Requests
+#                      quando várias categorias mudam na mesma execução.
 #   -h, --help         mostra esta ajuda
 #
 # Dependências opcionais: notify (projectdiscovery) para as notificações.
@@ -36,6 +39,7 @@ NEW_LIMIT=10
 REMOVED_LIMIT=5
 NOTIFY=auto
 DIGEST=1
+SEND_DELAY=1
 
 usage() {
     cat <<'EOF'
@@ -50,6 +54,7 @@ Opções:
   --new-limit N      máx. de itens novos exibidos por categoria (padrão: 10)
   --removed-limit N  máx. de itens removidos exibidos por categoria (padrão: 5)
   --no-digest        não envia o resumo final via notify
+  --send-delay N     pausa (segundos) entre notificações do Discord (padrão: 1)
   -h, --help         mostra esta ajuda
 EOF
 }
@@ -60,6 +65,7 @@ while [ $# -gt 0 ]; do
         --new-limit)     NEW_LIMIT="${2:?--new-limit requer um valor}"; shift ;;
         --removed-limit) REMOVED_LIMIT="${2:?--removed-limit requer um valor}"; shift ;;
         --no-digest)     DIGEST=0 ;;
+        --send-delay)    SEND_DELAY="${2:?--send-delay requer um valor}"; shift ;;
         -h|--help)       usage; exit 0 ;;
         -*)              echo "Opção desconhecida: $1" >&2; usage >&2; exit 1 ;;
         *)               DIR="$1" ;;
@@ -72,6 +78,9 @@ case "$NEW_LIMIT" in
 esac
 case "$REMOVED_LIMIT" in
     ''|*[!0-9]*) echo "--removed-limit deve ser um número (0 desativa a prévia)" >&2; exit 1 ;;
+esac
+case "$SEND_DELAY" in
+    ''|*[!0-9]*) echo "--send-delay deve ser um número (em segundos)" >&2; exit 1 ;;
 esac
 
 [ -d "$DIR" ] || { echo "Diretório não encontrado: $DIR" >&2; exit 1; }
@@ -159,7 +168,9 @@ label_for() { echo "${LABELS[${1:-}]:-${1:-}}"; }
 # envia a mensagem (notify) ou imprime no terminal (fallback)
 send() {
     if [ "$NOTIFY" = yes ]; then
-        printf '%s\n' "$1" | notify -disable-update-check
+        printf '%s\n' "$1" | notify -disable-update-check || true
+        # Evita o 429 do Discord quando várias categorias mudam na mesma execução.
+        [ "$SEND_DELAY" -gt 0 ] && sleep "$SEND_DELAY"
     else
         printf '%s\n' "$1"
     fi

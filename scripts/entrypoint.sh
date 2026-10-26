@@ -50,7 +50,9 @@ write_env_var() {
         HACKERONE_USERNAME \
         HACKERONE_TOKEN \
         BUGCROWD_PROXY_LIST \
-        HACKERONE_PROXY_LIST
+        HACKERONE_PROXY_LIST \
+        PUID \
+        PGID
     do
         write_env_var "$var"
     done
