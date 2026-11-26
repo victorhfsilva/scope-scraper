@@ -270,6 +270,11 @@ antigo:
 Se não houver arquivo anterior (primeira execução), todos os domínios são
 considerados novos.
 
+Quando a execução não encontra nenhum domínio novo (por exemplo, quando o escopo
+de hoje é idêntico ao de ontem), os arquivos `*_new.txt` **não** são
+sobrescritos: eles permanecem inalterados com os domínios descobertos nos dias
+passados, em vez de serem esvaziados.
+
 ### CSVs brutos
 
 ```text

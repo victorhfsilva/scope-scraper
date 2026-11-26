@@ -9,6 +9,10 @@
 Os arquivos sao gravados dentro de /output, que no docker-compose e o bind
 mount ./data do host. A cada execucao, os arquivos *_new.txt sao recalculados
 comparando o escopo atual com o arquivo consolidado da execucao anterior.
+
+Quando o escopo atual nao traz nenhum dominio novo (por exemplo, quando e
+identico ao do dia anterior), os arquivos *_new.txt NAO sao sobrescritos:
+permanecem inalterados com os dominios descobertos nos dias passados.
 """
 from __future__ import annotations
 
@@ -158,19 +162,36 @@ def main() -> int:
 
     new_wildcard_path = new_path(output)
     new_domain_path = new_path(plain_output)
-    write_lines(new_wildcard_path, {f"*.{domain}" for domain in new_domains})
-    write_lines(new_domain_path, new_domains)
+
+    if new_domains:
+        write_lines(new_wildcard_path, {f"*.{domain}" for domain in new_domains})
+        write_lines(new_domain_path, new_domains)
+    else:
+        # Nada novo em relacao a execucao anterior (ex.: escopo identico ao de
+        # ontem). Preserva os arquivos *_new.txt intactos para que continuem
+        # mostrando os dominios descobertos nos dias passados, em vez de
+        # esvazia-los. So cria um arquivo vazio se ele ainda nao existir.
+        for path in (new_wildcard_path, new_domain_path):
+            if not path.exists():
+                write_lines(path, set())
 
     print(
         f"[aggregate] Bugcrowd={len(bugcrowd)} HackerOne={len(hackerone)} "
         f"combinados={len(domains)} -> {args.output}",
         file=sys.stderr,
     )
-    print(
-        f"[aggregate] novos={len(new_domains)} "
-        f"(wildcards -> {new_wildcard_path}, dominios -> {new_domain_path})",
-        file=sys.stderr,
-    )
+    if new_domains:
+        print(
+            f"[aggregate] novos={len(new_domains)} "
+            f"(wildcards -> {new_wildcard_path}, dominios -> {new_domain_path})",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            f"[aggregate] novos=0; escopo sem mudancas. Arquivos *_new "
+            f"preservados: {new_wildcard_path}, {new_domain_path}",
+            file=sys.stderr,
+        )
     return 0
 
 
