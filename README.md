@@ -275,6 +275,12 @@ de hoje é idêntico ao de ontem), os arquivos `*_new.txt` **não** são
 sobrescritos: eles permanecem inalterados com os domínios descobertos nos dias
 passados, em vez de serem esvaziados.
 
+Tanto os arquivos consolidados (`all_scope_domains.txt`, `all_scope_wildcards.txt`)
+quanto os `*_new.txt` só recebem domínios completos (registráveis), como
+`target.com` ou `target.gov.br`. Sufixos públicos isolados (`gov.br`, `com.br`,
+`co.uk`, …), que representariam uma infinidade de subdomínios, são descartados
+usando a Public Suffix List embutida no `tldextract` (sem acesso à rede).
+
 ### CSVs brutos
 
 ```text

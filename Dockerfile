@@ -50,7 +50,8 @@ RUN pip install --no-cache-dir \
         "scrapy-rotating-proxies==0.6.2" \
         "scrapyd==1.6.0" \
         "scrapyd-client==2.0.3" \
-        "python-dotenv==1.2.1"
+        "python-dotenv==1.2.1" \
+        "tldextract==5.4.0"
 
 # Projetos Scrapy em /opt (mesmos caminhos usados pelo pipeline)
 COPY bugcrowdscraper /opt/BugcrowdScraper

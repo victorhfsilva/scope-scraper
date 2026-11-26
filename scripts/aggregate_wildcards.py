@@ -13,6 +13,11 @@ comparando o escopo atual com o arquivo consolidado da execucao anterior.
 Quando o escopo atual nao traz nenhum dominio novo (por exemplo, quando e
 identico ao do dia anterior), os arquivos *_new.txt NAO sao sobrescritos:
 permanecem inalterados com os dominios descobertos nos dias passados.
+
+Os arquivos *_new.txt so recebem dominios completos (registraveis), como
+target.com ou target.gov.br. Sufixos publicos isolados (ex.: gov.br, com.br,
+co.uk), que representariam uma infinidade de subdominios, sao descartados
+usando a Public Suffix List embutida no tldextract.
 """
 from __future__ import annotations
 
@@ -21,6 +26,12 @@ import ipaddress
 import re
 import sys
 from pathlib import Path
+
+import tldextract
+
+# Extrator offline: usa apenas o snapshot da Public Suffix List embutido no
+# pacote, sem fazer requisicoes de rede.
+_PSL = tldextract.TLDExtract(suffix_list_urls=(), fallback_to_snapshot=True)
 
 DOMAIN_RE = re.compile(
     r"^(?=.{1,253}$)"
@@ -76,6 +87,17 @@ def normalize(raw: str) -> str | None:
         return None
 
     return value
+
+
+def is_complete_domain(domain: str) -> bool:
+    """Indica se o dominio e registravel (eTLD+1) sob um sufixo publico.
+
+    Rejeita sufixos publicos isolados como ``gov.br``, ``com.br`` ou ``co.uk``,
+    que teriam uma infinidade de subdominios e nao sao alvos concretos.
+    Aceita ``target.com``, ``target.gov.br`` e hosts especificos.
+    """
+    extracted = _PSL(domain)
+    return bool(extracted.domain)
 
 
 def iter_lines(paths: list[Path]):
@@ -148,7 +170,14 @@ def main() -> int:
         "*_rough_wildcards.txt",
     ])
 
-    domains = bugcrowd | hackerone
+    raw_domains = bugcrowd | hackerone
+
+    # Somente dominios completos (registraveis) entram nos arquivos, tanto no
+    # consolidado quanto nos *_new.txt. Sufixos publicos isolados (gov.br,
+    # com.br, co.uk, ...) sao descartados por representarem uma infinidade de
+    # subdominios e nao um alvo concreto.
+    domains = {d for d in raw_domains if is_complete_domain(d)}
+    dropped = raw_domains - domains
     wildcards = {f"*.{domain}" for domain in domains}
 
     output = Path(args.output)
@@ -180,6 +209,12 @@ def main() -> int:
         f"combinados={len(domains)} -> {args.output}",
         file=sys.stderr,
     )
+    if dropped:
+        print(
+            f"[aggregate] descartados {len(dropped)} sufixo(s) publico(s) "
+            f"incompleto(s): {', '.join(sorted(dropped))}",
+            file=sys.stderr,
+        )
     if new_domains:
         print(
             f"[aggregate] novos={len(new_domains)} "
